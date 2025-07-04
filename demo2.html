@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Trash Bin Control</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #b2fefa, #0ed2f7);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      width: 90%;
+      max-width: 450px;
+    }
+    h1 {
+      text-align: center;
+      color: #00796b;
+      margin-bottom: 20px;
+    }
+    #status {
+      font-size: 16px;
+      padding: 10px;
+      background-color: #e0f2f1;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .slider-container {
+      margin-bottom: 20px;
+    }
+    input[type=range] {
+      width: 100%;
+    }
+    .angle-output {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .counter {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .counter-box {
+      background: #e0f7fa;
+      padding: 15px;
+      border-radius: 10px;
+      width: 50%;
+      text-align: center;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 20px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Trash Bin</h1>
+    <div id="status">Connecting to Blynk...</div>
+
+    <div class="slider-container">
+      <label for="angle">Manual Servo Angle:</label>
+      <input type="range" id="angle" min="0" max="180" value="90" />
+      <div class="angle-output">Angle: <span id="angleVal">90</span>°</div>
+    </div>
+
+    <select id="modeSelector">
+      <option value="auto">Automatic Sorting</option>
+      <option value="manual">Manual Control</option>
+      <option value="lock">Lock Servo</option>
+    </select>
+
+    <div class="counter">
+      <div class="counter-box">
+        <strong>Metal</strong>
+        <p id="metalCount">0</p>
+      </div>
+      <div class="counter-box">
+        <strong>Non-Metal</strong>
+        <p id="nonMetalCount">0</p>
+      </div>
+    </div>
+
+    <footer>Created for Everyone | Realtime Blynk Control</footer>
+  </div>
+
+  <script>
+    const authToken = "0DjU0Mbq5RxR4_obV9Xa05K4ckX9jmv2";
+    const statusDiv = document.getElementById("status");
+    const angleInput = document.getElementById("angle");
+    const angleVal = document.getElementById("angleVal");
+    const metalCountEl = document.getElementById("metalCount");
+    const nonMetalCountEl = document.getElementById("nonMetalCount");
+    const modeSelector = document.getElementById("modeSelector");
+
+    // ส่งค่ามุมเซอร์โวไปยัง Blynk (Virtual Pin V1)
+    function writeAngleToBlynk(angle) {
+      fetch(https://blynk.cloud/external/api/update?token=${authToken}&v1=${angle});
+    }
+
+    // ส่งโหมดการทำงานไปยัง Blynk (Virtual Pin V4)
+    function changeMode(mode) {
+      let value = 2; // default = auto
+      if (mode === "lock") value = 0;
+      else if (mode === "manual") value = 1;
+      fetch(https://blynk.cloud/external/api/update?token=${authToken}&v4=${value});
+    }
+
+    // ดึงข้อมูลจำนวนขยะจาก Blynk (Virtual Pins V2, V3)
+    async function updateCounters() {
+      try {
+        const metal = await fetch(https://blynk.cloud/external/api/get?token=${authToken}&v2).then(r => r.text());
+        const nonMetal = await fetch(https://blynk.cloud/external/api/get?token=${authToken}&v3).then(r => r.text());
+        metalCountEl.textContent = metal;
+        nonMetalCountEl.textContent = nonMetal;
+        statusDiv.textContent = "Connected to Smart Bin";
+      } catch (e) {
+        statusDiv.textContent = "Disconnected or API Error";
+      }
+    }
+
+    // อัปเดตทุก 5 วินาที
+    setInterval(updateCounters, 5000);
+    updateCounters(); // เรียกตอนโหลดหน้า
+
+    // จัดการเหตุการณ์จากผู้ใช้
+    angleInput.addEventListener("input", () => {
+      const angle = parseInt(angleInput.value);
+      angleVal.textContent = angle;
+      writeAngleToBlynk(angle);
+    });
+
+    modeSelector.addEventListener("change", () => {
+      const mode = modeSelector.value;
+      changeMode(mode);
+    });
+
+    // แสดงสถานะเริ่มต้น
+    statusDiv.textContent = "Waiting for Smart Bin connection...";
+  </script>
+</body>
+</html>
